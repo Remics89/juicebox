@@ -1,5 +1,5 @@
 // grab our client with destructuring from the export in index.js
-const { client, getAllUsers, createUser, updateUser, createPost, getAllPosts, getUserById } = require("./index");
+const { client, getAllUsers, createUser, updateUser, createPost, getAllPosts, getUserById, updatePost } = require("./index");
 
 async function createPosts() {
     try {
@@ -52,22 +52,63 @@ async function createInitialUsers() {
     }
 }
 
+async function createInitialPosts() {
+    try {
+        console.log("Creating Posts....")
+
+        const [albert, sandra, glamgal] = await getAllUsers();
+
+        await createPost({
+            authorId: albert.id, 
+            title: "First Post", 
+            content: "This is my first post. I hope I love writing blogs as much as I love writing them."
+        });
+
+        await createPost({
+            authorId: sandra.id,
+            title: "My first post",
+            content: "This is my first post. I am excited to keep posting new blogs."
+        });
+
+        await createPost({
+            authorId: glamgal.id,
+            title: "My first post",
+            content: "This is my first post. I am excited to keep posting new blogs."
+        });
+
+        console.log("Initial posts created.....")
+    } catch (error) {
+        throw error
+    }
+}
+
 async function testDB() {
     try {
         console.log("Testing the DB.....");
-
         const users = await getAllUsers();
         console.log("getAllUsers:", users);
-
-        const posts = await getAllPosts();
-        console.log("getAllPosts:", posts)
 
         console.log("Updating user 0....");
         const updateResult = await updateUser(users[0].id, {
             name: "new name",
             location: "new location",
         });
-        console.log("Update result: ", updateResult);
+        console.log("User Update Result: ", updateResult)
+
+        console.log("Getting All Posts")
+        const posts = await getAllPosts();
+        console.log("getAllPosts:", posts)
+
+        console.log("Updating Posts on posts[0]");
+        const updatePostResult = await updatePost(posts[0].authorId, {
+            title: "New Title",
+            content: "Updated Content"
+        });
+        console.log('Posts Update Result: ', updatePostResult);
+
+        console.log("Getting User By ID 1");
+        const albert = await getUserById(1);
+        console.log("User ID Result: ", albert); 
 
         console.log("Tests succeeded......");
     } catch (error) {
@@ -83,7 +124,7 @@ async function dropTables() {
 
         await client.query(`
         DROP TABLE IF EXISTS posts;
-      DROP TABLE IF EXISTS users
+      DROP TABLE IF EXISTS users;
     `);
 
         console.log("Tables dropped....");
@@ -122,10 +163,10 @@ async function rebuildDB() {
 
         await dropTables();
         await createTables();
-        await createInitialUsers();
         await createPosts();
-        const userData = await getUserById(0);
-        console.log("userData: ", userData);
+        await createInitialUsers();
+        await createInitialPosts();
+        
     } catch (error) {
         throw error;
     }

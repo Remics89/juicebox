@@ -9,36 +9,37 @@ async function getAllUsers() {
 }
 
 async function getAllPosts() {
-    const { columns } = await client.query(`SELECT id, "authorId", title, content FROM posts;`);
-    return columns;
+    const {rows} = await client.query(`SELECT "authorId", title, content FROM posts;`);
+    return rows;
 }
 
 async function getUserById(userID) {
     try {
-        const rows = await client.query(`
-          SELECT user
+        const { rows } = await client.query(`
+          SELECT *
           FROM users
           WHERE id=${userID};
         `);
 
-        if (rows.length === 0) {
+        if (rows[0] === undefined) {
             return null;
         } else {
-            return rows;
+            delete rows[0].password;
+            const posts = await getPostsByUser(rows[0].id);
+            rows[0].posts = posts.rows;
+            return rows[0];
         }
     } catch (error) {
         throw error;
     }
 }
 
-
 async function getPostsByUser(userID) {
     try {
-        const { userPosts } = await client.query(`
+        const userPosts = await client.query(`
     SELECT * FROM posts
     WHERE "authorId"=${userID}
   `);
-
         return userPosts;
     } catch (error) {
         throw error;
@@ -97,11 +98,7 @@ async function createPost({ authorId, title, content }) {
             rows: [post],
         } = await client.query(
             `
-        INSERT INTO posts (
-          ("authorId", title, content)
-          VALUES ($1, $2, $3)
-          RETURNING *;
-        )
+        INSERT INTO posts ("authorId", title, content) VALUES ($1, $2, $3) RETURNING *;
       `,
             [authorId, title, content]
         );
