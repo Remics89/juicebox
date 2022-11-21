@@ -1,7 +1,7 @@
 // grab our client with destructuring from the export in index.js
-const { client, getAllUsers, createUser, updateUser, createPost, getAllPosts, getUserById, updatePost } = require("./index");
+const { client, getAllUsers, createUser, updateUser, createPost, getAllPosts, getUserById, updatePost, createTags, addTagsToPost } = require("./index");
 
-async function createPosts() {
+async function createPostsTable() {
     try {
         console.log("Building Posts.....");
 
@@ -18,6 +18,42 @@ async function createPosts() {
         console.log("Posts table built.....");
     } catch (error) {
         console.error("Failed to build posts table");
+        throw error;
+    }
+}
+
+async function createTagsTable(){ 
+    try {
+        console.log("Building tags table....");
+
+        await client.query(`
+            CREATE TABLE tags (
+                id SERIAL PRIMARY KEY,
+                name VARCHAR(255) UNIQUE NOT NULL
+            )
+        `);
+
+        console.log("TAGS TABLE BUILT....")
+    } catch (error) {
+        console.error("TAGS TABLE COULD NOT BE BUILT....")
+        throw error;
+    }
+}
+
+async function createPostTagsTable(){
+    try {
+        console.log("Building Post Tags Table....")
+
+        await client.query(`
+            CREATE TABLE post_tags (
+                "postId" INTEGER REFERENCES posts(id) UNIQUE,
+                "tagId" INTEGER REFERENCES tags(id) UNIQUE
+            )
+        `)
+
+        console.log("Post Tags Table built....")
+    } catch (error) {
+        console.error("Post Tags table could not be built")
         throw error;
     }
 }
@@ -82,6 +118,35 @@ async function createInitialPosts() {
     }
 }
 
+async function createInitialTags() {
+    try {
+        console.log('Creating Tags....');
+        
+        const [happy, sad, inspo, catman] = await createTags([
+            '#happy',
+            '#worst-day-ever',
+            '#youcandoanything',
+            '#catmandoeverything'
+        ]);
+        console.log("pass1")
+
+        const [postOne, postTwo, postThree] = await getAllPosts();
+        console.log("pass2")
+
+        await addTagsToPost(postOne.id, [happy, inspo]);
+        console.log("pass3")
+        await addTagsToPost(postTwo.id, [sad, inspo]);
+        console.log("pass4")
+        await addTagsToPost(postThree.id, [happy, catman, inspo]);
+        console.log("pass5")
+
+        console.log("Finished creating tags!");
+    } catch (error) {
+        console.log("Error: Could not create tags.");
+        throw error;
+    }
+}
+
 async function testDB() {
     try {
         console.log("Testing the DB.....");
@@ -123,8 +188,10 @@ async function dropTables() {
         console.log("Dropping Tables......");
 
         await client.query(`
+        DROP TABLE IF EXISTS post_tags;
+        DROP TABLE IF EXISTS tags;
         DROP TABLE IF EXISTS posts;
-      DROP TABLE IF EXISTS users;
+        DROP TABLE IF EXISTS users;
     `);
 
         console.log("Tables dropped....");
@@ -135,7 +202,7 @@ async function dropTables() {
 }
 
 // this function should call a query which creates all tables for our database
-async function createTables() {
+async function createUsersTable() {
     try {
         console.log("Building tables.....");
 
@@ -162,10 +229,13 @@ async function rebuildDB() {
         client.connect();
 
         await dropTables();
-        await createTables();
-        await createPosts();
+        await createUsersTable();
+        await createPostsTable();
+        await createTagsTable();
+        await createPostTagsTable();
         await createInitialUsers();
         await createInitialPosts();
+        await createInitialTags();
         
     } catch (error) {
         throw error;
