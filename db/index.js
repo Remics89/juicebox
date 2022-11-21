@@ -1,7 +1,12 @@
 const { Client } = require("pg"); // imports the pg module
 
+const { DATABASE_URL = "postgres://localhost:5432/juicebox-dev"} = process.env;
+
 // supply the db name and location of the database
-const client = new Client("postgres://localhost:5432/juicebox-dev");
+const client = new Client({
+    connectionString: DATABASE_URL,
+    ssl: process.env.NODE_ENV === 'production' ? {rejectUnauthorized:  false } : undefined
+});
 
 async function getAllUsers() {
     const { rows } = await client.query(`SELECT id, username, name, location, active FROM users;`);
